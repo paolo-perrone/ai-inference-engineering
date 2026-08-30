@@ -1,0 +1,16 @@
+[project]
+name = "ai-inference-engineering"
+version = "0.1.0"
+description = "Companion code for AI Inference Engineering (Manning)"
+requires-python = ">=3.11"
+
+# Base only. Anything engine-specific is pinned per chapter, because those are
+# the fastest-moving dependencies in the book and they do not belong in a shared
+# lockfile that every reader has to resolve.
+dependencies = [
+    "numpy",
+    "rich",
+]
+
+[tool.uv]
+package = false

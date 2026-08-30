@@ -1,0 +1,32 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# env + secrets
+.env
+.env.*
+*.key
+
+# models and data, never commit weights
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth
+models/
+checkpoints/
+data/
+
+# profiling output
+*.nsys-rep
+*.ncu-rep
+*.qdrep
+traces/
+prof/
+
+# os
+.DS_Store
