@@ -94,7 +94,7 @@ Requires Python 3.11 or newer and, for most chapters, an NVIDIA GPU.
 Chapters that run on CPU or on other accelerators say so in their own README.
 
 ```bash
-git clone https://github.com/paoloperrone/ai-inference-engineering
+git clone https://github.com/paolo-perrone/ai-inference-engineering
 cd ai-inference-engineering
 uv sync
 ```
