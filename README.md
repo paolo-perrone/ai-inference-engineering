@@ -46,7 +46,7 @@ The other 30% is deliberately perishable and quarantined into dated sidebars and
 
 ## Table of contents
 
-### Part 1. Foundations: understanding how inference works
+### Part 1. Foundations: understanding how a model runs
 
 | | Chapter | Code |
 |---|---|---|
