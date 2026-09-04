@@ -32,6 +32,16 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **Time per output token (TPOT)** | covered as ITL | Decode-bound. The reciprocal relationship to perceived tokens per second is where readers get confused. |
 | 🟡 ⬜ | **ISL and OSL** | covered well, and it is one of his best artifacts | Input and output sequence length. The ratio decides prefill-heavy against decode-heavy, which decides the silicon. |
 | ⚪ ⬜ | **Inference engineering** | covered, as an outcome rather than a boundary | His: making a model faster, cheaper and more reliable. That says nothing about what the role owns or where it hands off. |
+| 🟡 ⬜ | **Latency** | covered | p50 against p99, and why an average hides the request that loses the user. |
+| 🟡 ⬜ | **Throughput** | covered | Tokens per second for the fleet, not for one user. The confusion with perceived speed is the entry. |
+| ⚪ ⬜ | **Token** | covered | The billing unit and the compute unit, and they are not the same quantity of meaning. |
+| ⚪ ⬜ | **Context window** | covered | The hard ceiling on one request, and the thing that makes the cache expensive. |
+| ⚪ ⬜ | **Prompt** | covered |  |
+| ⚪ ⬜ | **Inference** | covered | A forward pass, once, with no gradient. |
+| ⚪ ⬜ | **Serving** | thin | Inference plus everything around it: queueing, batching, streaming, failure. |
+| 🔴 ⬜ | **Percentile (p50, p90, p99)** | covered well, and his gloss is good | One in N requests is slower. Credit the framing, add what it costs at scale. |
+| 🔴 ⬜ | **Tail latency** | absent as a term | The p99 problem named, since that is what an SLO commits to. |
+| 🔴 ⬜ | **Prefill-heavy and decode-heavy** | implicit in his ISL/OSL | The workload classification that decides the silicon. |
 
 ### Chapter 2. How GPUs run models
 
@@ -52,6 +62,16 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | ⚪ ⬜ | **HBM** | covered | Capacity and bandwidth per generation. |
 | ⚪ ⬜ | **Streaming multiprocessor (SM)** | covered as a definition box | Contains CUDA cores, tensor cores and special function units. |
 | ⚪ ⬜ | **Tensor core** | covered | |
+| ⚪ ⬜ | **CUDA core** | covered |  |
+| ⚪ ⬜ | **VRAM** | covered | And the headroom question he answers three different ways. |
+| ⚪ ⬜ | **GDDR against HBM** | thin |  |
+| 🟡 ⬜ | **Memory bandwidth** | covered as a spec number | The straw. Every decode step reads every weight. |
+| 🔴 ⬜ | **L1 and L2 cache** | tabulated with capacities, never with bandwidths | Capacity without bandwidth is why his roofline has one memory number. |
+| 🔴 ⬜ | **Thread block** | absent |  |
+| 🔴 ⬜ | **Kernel** | thin, used without definition | The unit of GPU work, and the thing launch overhead is overhead of. |
+| 🔴 ⬜ | **Machine balance point** | derived once as 295 on an H100 | Where the roofline bends. His derivation is good and the entry extends it. |
+| 🔴 ⬜ | **FLOPs against FLOPS** | absent | Operations against operations per second. Readers conflate them and misprice everything. |
+| 🟡 ⬜ | **TFLOPS** | covered in spec tables | Dense against sparse, which he flags correctly. |
 
 ### Chapter 3. The forward pass and the kernels that run it
 
@@ -63,6 +83,23 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **Decode** | covered, vector-matrix | Same. |
 | ⚪ ⬜ | **Logits** | covered | |
 | ⚪ ⬜ | **Sampling, temperature, top-k, top-p** | covered | |
+| ⚪ ⬜ | **Autoregressive generation** | covered |  |
+| ⚪ ⬜ | **Forward pass** | covered |  |
+| ⚪ ⬜ | **Embedding** | covered |  |
+| ⚪ ⬜ | **Hidden state** | covered |  |
+| ⚪ ⬜ | **Attention head** | covered |  |
+| ⚪ ⬜ | **Query, key, value** | covered |  |
+| ⚪ ⬜ | **Softmax** | absent from his glossary |  |
+| ⚪ ⬜ | **Feed-forward network** | covered | And the weight accounting he never reconciles with attention cost. |
+| ⚪ ⬜ | **Layer normalisation** | absent |  |
+| ⚪ ⬜ | **Residual stream** | absent |  |
+| ⚪ ⬜ | **Transformer block** | covered, with a seven-step interactive |  |
+| ⚪ ⬜ | **Decoder-only** | covered |  |
+| 🔴 ⬜ | **Causal mask** | absent as a term | Why a token cannot see the future, and what the greyed triangle in every attention heatmap is. |
+| 🔴 ⬜ | **Matrix-matrix against vector-matrix** | covered as the prefill/decode root cause | One of his best sentences. The entry adds the arithmetic intensity of each. |
+| 🔴 ⬜ | **Memory round trip** | absent | What fusion removes and what FlashAttention avoids. |
+| 🔴 ⬜ | **Tiling** | absent | The mechanism inside FlashAttention, given nowhere in the competing text. |
+| 🟡 ⬜ | **Tokenizer** | covered, correctly, as a lookup rather than a network | The fertility entry in chapter 11 is where this pays off. |
 
 ### Chapter 4. The accelerator landscape
 
@@ -73,6 +110,15 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **Unified memory** | covered via Apple M4 Max | The DGX Spark case is the more interesting one: capacity without bandwidth. |
 | 🟡 ⬜ | **MIG** | covered, with a worked 3/7 slice | The entry has to beat a worked example, so it needs the latency consequence of slicing. |
 | ⚪ ⬜ | **NVLink, NVSwitch, InfiniBand** | covered as a spec table | Chapter 10 makes these mechanisms rather than numbers. |
+| ⚪ ⬜ | **TPU** | covered |  |
+| ⚪ ⬜ | **Inferentia and Trainium** | covered |  |
+| ⚪ ⬜ | **Systolic array** | absent |  |
+| ⚪ ⬜ | **ROCm** | thin |  |
+| 🔴 ⬜ | **CUDA moat** | named in the competing text without a mechanism | What actually makes porting hard: kernels, libraries, and the long tail of ops. |
+| 🔴 ⬜ | **Compiler-first** | absent | The TPU and Groq bet, against the kernel-first bet. |
+| 🔴 ⬜ | **CPU offload** | absent | Trading bandwidth for capacity, and when it is worth it. |
+| 🔴 ⬜ | **NPU** | absent |  |
+| 🟡 ⬜ | **Unified memory** | covered via Apple silicon | The DGX Spark case: 128 GB at 273 GB/s against an H100's 3.35 TB/s. |
 
 ---
 
@@ -86,6 +132,16 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **Speculative decoding** | covered | Draft and verify. The entry adds the acceptance rate that decides whether it pays. |
 | 🟡 ⬜ | **INT4 and INT8** | covered, and his own table contradicts his conclusion: he reads a 4x memory-access cut as a speed win while the table shows decode throughput plateauing after 8 bits | The correction is the entry. |
 | ⚪ ⬜ | **Distillation** | covered well, defined against synthetic-data fine-tuning by the teacher's distributions | |
+| ⚪ ⬜ | **FP16 and BF16** | covered |  |
+| ⚪ ⬜ | **FP8** | covered |  |
+| ⚪ ⬜ | **Weight-only quantization** | thin |  |
+| ⚪ ⬜ | **Pruning** | covered |  |
+| ⚪ ⬜ | **Calibration set** | absent |  |
+| 🔴 ⬜ | **Perplexity against task accuracy** | absent | The two ways to measure what quantization cost, and they disagree. |
+| 🔴 ⬜ | **Draft model** | thin | Speculative decoding's cheaper half, and the acceptance rate that decides if it pays. |
+| 🔴 ⬜ | **Acceptance rate** | absent | Why speculative decoding wins on code and loses on prose. |
+| 🔴 ⬜ | **Constrained generation** | covered as a bullet | Grammar-constrained decoding, and what it costs per token. |
+| 🔴 ⬜ | **Response caching** | thin | Exact-match against semantic, and the staleness question. |
 
 ### Chapter 6. The KV cache
 
@@ -99,6 +155,13 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **PagedAttention** | covered | Blocks rather than contiguous allocation. The entry adds the fragmentation number it removes. |
 | 🟡 ⬜ | **Prefix caching** | covered | And measured elsewhere: prefix cache is 58.6% of cost across 665,453 agent steps in the TraceLab corpus. |
 | 🔴 ⬜ | **KV cache eviction** | absent | What happens when the cache does not fit, which is the normal case at long context. |
+| ⚪ ⬜ | **Multi-head attention (MHA)** | covered |  |
+| ⚪ ⬜ | **Cache hit rate** | absent as a term | The number that decides whether prefix caching is working. |
+| 🔴 ⬜ | **KV head** | absent | Why GQA at four KV heads costs 56 KB per token rather than 224. |
+| 🔴 ⬜ | **Block table** | absent | PagedAttention's indirection, and the thing that makes sharing possible. |
+| 🔴 ⬜ | **Fragmentation** | covered as the problem PagedAttention solves | The entry adds the percentage it wastes. |
+| 🔴 ⬜ | **KV quantization** | thin | Halving the cache at a stated accuracy cost. |
+| 🔴 ⬜ | **Streaming attention** | absent | Fixed-budget attention for unbounded context. |
 
 ### Chapter 7. Batching and scheduling
 
@@ -111,6 +174,13 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🔴 ⬜ | **Preemption** | absent | Same. |
 | 🔴 ⬜ | **Queueing** | the word appears nowhere on his site | Every latency complaint the reader has is a queueing phenomenon. |
 | 🔴 ⬜ | **Generation stall** | absent | Documented in Sarathi-Serve, OSDI'24: prefills scheduled ahead of resumed decodes, with 2.6x to 5.6x capacity gains from removing them. |
+| ⚪ ⬜ | **Static batching** | covered |  |
+| ⚪ ⬜ | **Dynamic batching** | covered |  |
+| 🔴 ⬜ | **Batch size** | covered as advice, never as a crossing point | Where decode stops being memory-bound. The number, on named hardware. |
+| 🔴 ⬜ | **Scheduler** | the word appears nowhere on his site | The component that decides what runs in the next forward pass. |
+| 🔴 ⬜ | **Token budget** | absent | vLLM's max_num_batched_tokens, and what it actually caps. |
+| 🔴 ⬜ | **Iteration-level scheduling** | absent | Why continuous batching is continuous. |
+| 🔴 ⬜ | **Arrival rate** | absent | The input to Little's Law, which his chapter promises and never delivers. |
 
 ### Chapter 8. Inference engines as systems
 
@@ -119,6 +189,16 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🟡 ⬜ | **RadixAttention** | covered | SGLang's prefix-sharing structure. |
 | 🔴 ⬜ | **Multi-LoRA serving** | absent | Many fine-tunes on one base, which is how most production fleets actually run. |
 | 🔴 ⬜ | **The build-buy line** | structurally absent: he sells the layer above CUDA | Where a library stops paying and a custom kernel starts. He cannot write this honestly. |
+| ⚪ ⬜ | **vLLM** | covered |  |
+| ⚪ ⬜ | **SGLang** | covered |  |
+| ⚪ ⬜ | **TensorRT-LLM** | covered |  |
+| ⚪ ⬜ | **Engine** | thin |  |
+| 🔴 ⬜ | **Request lifecycle** | absent as a named path | Arrive, tokenize, schedule, prefill, decode, stream. His four-stage version drops queueing entirely. |
+| 🔴 ⬜ | **KV manager** | absent |  |
+| 🔴 ⬜ | **Kernel backend** | absent |  |
+| 🔴 ⬜ | **LoRA adapter** | thin | And why serving fifty of them on one base is a scheduling problem. |
+| 🔴 ⬜ | **Cascade and routing** | thin | Cheap model first, expensive model on failure, and what the routing costs. |
+| 🔴 ⬜ | **Multi-tenancy** | covered as a concern | Noisy neighbours, and the isolation that prevents them. |
 
 ---
 
@@ -132,6 +212,13 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🔴 ⬜ | **Expert parallelism** | appears once, attached to a 72-GPU rack | How MoE actually serves, and the counterpart to his correct point that batching activates nearly every expert. |
 | 🔴 ⬜ | **Context and sequence parallelism** | absent | |
 | ⚪ ⬜ | **Pipeline parallelism** | covered | |
+| ⚪ ⬜ | **Data parallelism** | covered |  |
+| ⚪ ⬜ | **Mixture of experts (MoE)** | covered well, including the batching correction |  |
+| ⚪ ⬜ | **Sharding** | thin |  |
+| 🔴 ⬜ | **Activation memory** | absent | The third memory consumer after weights and cache. |
+| 🔴 ⬜ | **Communication volume** | absent | What each parallelism strategy costs per token, which is how you choose between them. |
+| 🔴 ⬜ | **Expert routing** | thin | Per layer per token, and why capacity factors exist. |
+| 🔴 ⬜ | **Capacity factor** | absent |  |
 
 ### Chapter 10. Coordination and cluster scale
 
@@ -141,6 +228,13 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🔴 ⬜ | **Ring and hierarchical collectives** | absent | Why interconnect topology decides whether scaling is linear. |
 | 🔴 ⬜ | **Disaggregated prefill and decode** | compressed into his single chapter 5 | The textbook case for an agent workload, where prefill is enormous and decode is tiny. |
 | 🔴 ⬜ | **KV cache transfer** | absent | The stage that exists in disaggregated setups and in no teaching diagram. |
+| ⚪ ⬜ | **NCCL** | named | And the hang, which is chapter 11. |
+| 🔴 ⬜ | **Collective operation** | absent as a category |  |
+| 🔴 ⬜ | **Interconnect topology** | covered as a spec table | Ring against tree against fat-tree, and which one your all-reduce actually walks. |
+| 🔴 ⬜ | **Bandwidth against latency in a fabric** | absent | Why small collectives are latency-bound and large ones bandwidth-bound. |
+| 🔴 ⬜ | **Overlap of communication and compute** | absent | The reason scaling is not linear, and the fix. |
+| 🔴 ⬜ | **Prefill-decode disaggregation** | compressed into his chapter 5 | Two pools, two hardware profiles, one KV transfer between them. |
+| 🔴 ⬜ | **Load balancing** | thin | And what breaks past ten thousand GPUs. |
 
 ---
 
@@ -158,6 +252,16 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 | 🔴 ⬜ | **Cold start** | covered as a bullet | The entry needs the seconds, since that is what decides whether autoscaling is viable. |
 | 🔴 ⬜ | **Service tier** | absent | One string field, four prices and four latency profiles. A buyer-side lever, not an engineering one. |
 | 🔴 ⬜ | **Tokenizer fertility** | absent | Tokens per word, spanning 2.5x across 25 European languages. The same product costs 2.5x more per user in Athens than in London with no engineering change. |
+| ⚪ ⬜ | **SLO and SLA** | covered |  |
+| ⚪ ⬜ | **Autoscaling** | thin |  |
+| ⚪ ⬜ | **Warm pool** | absent |  |
+| 🔴 ⬜ | **MLPerf Inference** | absent | The benchmark, and what its rules force you to disclose. |
+| 🔴 ⬜ | **Load generator** | absent | Open-loop against closed-loop, and why the wrong one flatters your numbers. |
+| 🔴 ⬜ | **Nondeterminism** | absent | Batch-dependent floating-point reduction order, and why the same prompt drifts. |
+| 🔴 ⬜ | **Weight loading** | thin | Seconds to first request, and what it does to autoscaling. |
+| 🔴 ⬜ | **Hot swap** | absent |  |
+| 🔴 ⬜ | **Model deprecation** | absent | Published notice periods from six months to two weeks, and the re-qualification bill. |
+| 🔴 ⬜ | **Showback and chargeback** | absent | Who inside the company pays for which tokens. |
 
 ### Chapter 12. Designing an inference system end to end
 
@@ -165,15 +269,22 @@ Every term this book uses, defined once, with the arithmetic where arithmetic is
 |---|---|---|---|
 | 🟡 ⬜ | **SLO** | covered | The entry ties it to goodput, which he does not have. |
 | 🔴 ⬜ | **Capacity planning** | absent as a calculation | Little's Law applied, which is the objective his chapter 1 states and never delivers. |
+| 🔴 ⬜ | **Workload characterisation** | thin | ISL/OSL distribution, arrival pattern, concurrency, and the SLO. The four inputs to every later decision. |
+| 🔴 ⬜ | **Error budget** | absent | What an SLO permits you to spend, and the reason goodput has a threshold at all. |
+| 🔴 ⬜ | **Headroom** | answered three different ways in the competing text | 50 percent in the book, 20 in the guide, 10 to 20 in its FAQ, and a step-one heuristic that omits the cache entirely. |
 
 ---
 
 ## Counting
 
-**Seventy-four terms across all twelve chapters.** Forty-two are 🔴, meaning absent from the closest competing text and load-bearing here. Twenty-three are 🟡, where the entry wins by being correct or by carrying the arithmetic. Nine are ⚪.
+**181 terms across all twelve chapters.** Ninety-nine are 🔴, meaning absent from the closest competing text and load-bearing here. Twenty-nine are 🟡, where the entry wins by being correct or by carrying the arithmetic. Fifty-three are ⚪, ordinary vocabulary a reader looks up and every glossary needs.
 
-**For comparison, the competing glossary carries 54 terms in 10,127 words**, harvested 2026-07-30. This list is longer before a single entry is written, and forty-two of its terms have no counterpart there at all.
+**For comparison, the competing glossary carries 54 terms in 10,127 words**, harvested 2026-07-30. This list is three times longer before a single entry is written, and ninety-nine of its terms have no counterpart there.
+
+**The first draft of this list had 74 terms and it was wrong.** It carried every point of difference and almost none of the ordinary vocabulary, which is the half a reader actually searches for. A glossary that only holds what your competitor lacks is a comparison document, not a reference.
 
 **Three of the 🟡 exist because the competing text is wrong**, and the entry is the correction: attention complexity stated as linear, the INT4 speed claim contradicted by its own table, and tensor parallelism described two different ways by the same vendor.
 
-**Write order: 🔴 first, chapter by chapter, since those are the pages that rank for a term nobody else has an entry for.**
+**Write order: 🔴 first, chapter by chapter, since those are the pages that rank for a term nobody else has an entry for.** The ⚪ entries are short by design, two or three sentences, because their job is completeness rather than argument.
+
+**Every entry gets written as its chapter gets written**, not in a separate pass. A term defined by someone who has just spent a week on the mechanism reads differently from one defined from memory.
