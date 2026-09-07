@@ -1,6 +1,6 @@
 # The inference engineering glossary
 
-Every term used in *AI Inference Engineering: Serving Foundation Models in Production*
+Every term used in *AI Inference Engineering: Serving LLMs in Production*
 (Manning, in progress), defined once, in one place you can link to.
 
 **The rule for every entry: if a term has a formula, the formula is here and it is worked

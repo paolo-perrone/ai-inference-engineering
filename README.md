@@ -1,6 +1,6 @@
 # AI Inference Engineering
 
-### Serving foundation models in production
+### Serving LLMs in Production
 
 Companion repository for the book, published by [Manning](https://www.manning.com/).
 
