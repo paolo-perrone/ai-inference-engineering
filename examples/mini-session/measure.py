@@ -78,7 +78,72 @@ def run(engine, turns):
     return {"engine": engine, "turns": turns, "repo_files": len(repo_files()),
             "context_tokens": pt, "per_turn": per_turn,
             "cost_per_completed_task_usd": total,
+            "cost_by_stage": stage_split(per_turn),
             "rates_usd_per_million": RATES, "rates_dated": RATES_DATED}
+
+
+def stage_split(per_turn):
+    """Which serving stage owns each dollar of the task.
+
+    In this pricing model only two stages carry token dollars: prefill is billed on prompt
+    tokens and decode on completion tokens. Arrival, tokenization, queueing, scheduling and
+    streaming cost latency rather than tokens, and the split says so explicitly instead of
+    inventing a number for them. Figure 1.8 in the book is drawn from this block.
+    """
+    p = sum(t["prompt_tokens"] for t in per_turn) * RATES["prompt"] / 1e6
+    c = sum(t["completion_tokens"] for t in per_turn) * RATES["completion"] / 1e6
+    total = p + c
+    return {
+        "prefill_usd": round(p, 6), "decode_usd": round(c, 6),
+        "prefill_share": round(p / total, 3), "decode_share": round(c / total, 3),
+        "other_stages": "arrive, tokenize, queue, schedule, stream: latency, not tokens",
+    }
+
+
+def measure_live(url, model, turns, concurrency):
+    """The same session, actually served, with wall-clock numbers.
+
+    Sends the fixture's turns to an OpenAI-compatible /v1/completions endpoint and records
+    time to first token, total latency and tokens per second, at each requested concurrency.
+    This is what turns figure 1.4's frontier from a shape into data: run it at
+    concurrency 1, then 4, then 8, against the engine on your own card. Standard library
+    only, so the fixture stays dependency-free.
+    """
+    import concurrent.futures
+    import urllib.request
+
+    prompt = build_prompt()
+
+    def one_request():
+        body = json.dumps({"model": model, "prompt": prompt, "max_tokens": 180,
+                           "temperature": 0, "stream": True}).encode()
+        req = urllib.request.Request(url.rstrip("/") + "/v1/completions", data=body,
+                                     headers={"Content-Type": "application/json"})
+        t0 = time.monotonic()
+        first, tokens = None, 0
+        with urllib.request.urlopen(req, timeout=300) as r:
+            for line in r:
+                if not line.startswith(b"data:"):
+                    continue
+                if line.strip() == b"data: [DONE]":
+                    break
+                if first is None:
+                    first = time.monotonic() - t0
+                tokens += 1
+        return {"ttft_s": round(first or 0.0, 3),
+                "latency_s": round(time.monotonic() - t0, 3), "completion_tokens": tokens}
+
+    t0 = time.monotonic()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as ex:
+        results = [f.result() for f in [ex.submit(one_request) for _ in range(concurrency * turns)]]
+    wall = time.monotonic() - t0
+    lat = sorted(r["latency_s"] for r in results)
+    out_tokens = sum(r["completion_tokens"] for r in results)
+    return {"url": url, "model": model, "concurrency": concurrency,
+            "requests": len(results), "wall_s": round(wall, 3),
+            "p50_latency_s": lat[len(lat) // 2], "p99_latency_s": lat[-1],
+            "throughput_tokens_per_s": round(out_tokens / wall, 1),
+            "per_request": results}
 
 
 def self_test():
@@ -93,6 +158,11 @@ def self_test():
         fails.append("two runs of the same fixture differ, so no number here is comparable")
     if run("naive", 4)["cost_per_completed_task_usd"] <= run("cached", 4)["cost_per_completed_task_usd"]:
         fails.append("the naive loop should cost more than a cached one; the fixture proves nothing")
+    sn, sc = run("naive", 4)["cost_by_stage"], run("cached", 4)["cost_by_stage"]
+    if abs(sn["prefill_usd"] + sn["decode_usd"] - run("naive", 4)["cost_per_completed_task_usd"]) > 1e-5:
+        fails.append("the stage split does not sum to the task cost")
+    if not (sn["prefill_share"] > 0.5 > sc["prefill_share"]):
+        fails.append("naive should be prefill-heavy and cached should flip it; the split shows neither")
     if fails:
         for f in fails:
             print("  FAIL:", f)
@@ -105,6 +175,9 @@ def self_test():
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--engine", default="naive")
+    ap.add_argument("--url", help="OpenAI-compatible endpoint; switches to live measurement")
+    ap.add_argument("--model", default="qwen2.5-7b")
+    ap.add_argument("--concurrency", type=int, default=1)
     ap.add_argument("--turns", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--write-baseline", action="store_true")
@@ -112,6 +185,9 @@ def main():
     a = ap.parse_args()
     if a.self_test:
         return self_test()
+    if a.url:
+        print(json.dumps(measure_live(a.url, a.model, a.turns, a.concurrency), indent=2))
+        return 0
     r = run(a.engine, a.turns)
     print(json.dumps(r, indent=2))
     if a.write_baseline:

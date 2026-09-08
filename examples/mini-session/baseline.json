@@ -30,6 +30,13 @@
     }
   ],
   "cost_per_completed_task_usd": 0.00174,
+  "cost_by_stage": {
+    "prefill_usd": 0.001166,
+    "decode_usd": 0.000576,
+    "prefill_share": 0.669,
+    "decode_share": 0.331,
+    "other_stages": "arrive, tokenize, queue, schedule, stream: latency, not tokens"
+  },
   "rates_usd_per_million": {
     "prompt": 0.2,
     "completion": 0.8
