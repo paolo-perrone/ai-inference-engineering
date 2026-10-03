@@ -1,7 +1,7 @@
 # The mini session
 
 One coding-agent request, small enough that its whole token sequence prints on a page, the
-same shape as the 200,000-token version the book measures.
+same shape as the 128,000-token version the book measures.
 
 Every number in the book comes from here. Chapter 1 runs it naively and prints the cost per
 completed task; every chapter after that moves one number against the same fixture, so the
