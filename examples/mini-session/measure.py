@@ -11,6 +11,7 @@ attributable to the layer the chapter is about.
 Usage:
   python3 measure.py --dry-run              token accounting only, no model call
   python3 measure.py --engine naive         chapter 1's deliberately bad loop
+  python3 measure.py --engine naive --table the same run, as the book prints it
   python3 measure.py --engine vllm --url ...
   python3 measure.py --self-test
 """
@@ -61,17 +62,22 @@ def cost(prompt_tokens, completion_tokens):
 def run(engine, turns):
     """One session: `turns` requests over the same repo context.
 
-    A naive loop re-sends the whole prompt every turn. That is the number chapter 6 kills.
+    A naive loop re-sends the whole context every turn, history included, so each turn
+    costs more than the last. That is the number chapter 6 kills. A cached run sends only
+    each turn's new text, because everything before it already sits in the KV cache.
     """
     prompt = build_prompt()
     pt = count_tokens(prompt)
     per_turn = []
+    history = 0                            # earlier turns' text and answers, in tokens
     for i in range(turns):
+        new = 0 if i == 0 else count_tokens("Task: " + str(i))
         if engine == "naive":
-            sent = pt                      # the whole context, again
+            sent = pt + history + new      # the whole context, again, and it grows
         else:
-            sent = pt if i == 0 else count_tokens("Task: " + str(i))
+            sent = pt if i == 0 else new   # only the new text; the rest is cached
         out = 180                          # a patch of this size, measured once
+        history += new + out
         per_turn.append({"turn": i + 1, "prompt_tokens": sent, "completion_tokens": out,
                          "cost_usd": round(cost(sent, out), 6)})
     total = round(sum(t["cost_usd"] for t in per_turn), 6)
@@ -172,6 +178,19 @@ def self_test():
     return 0
 
 
+def print_table(r, model):
+    """The run as the book prints it: one line per turn, then the task's cost."""
+    print(f"{r['engine']} run, prices for {model}: "
+          f"${RATES['prompt']:.2f}/M prompt, ${RATES['completion']:.2f}/M completion")
+    print("turn  prompt  completion  cost_usd")
+    for t in r["per_turn"]:
+        print(f"{t['turn']:>4}  {t['prompt_tokens']:>6}  {t['completion_tokens']:>10}  "
+              f"{t['cost_usd']:.6f}")
+    s = r["cost_by_stage"]
+    print(f"cost per completed task: ${r['cost_per_completed_task_usd']:.6f} "
+          f"(prefill {s['prefill_share']:.1%}, decode {s['decode_share']:.1%})")
+
+
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--engine", default="naive")
@@ -181,6 +200,7 @@ def main():
     ap.add_argument("--turns", type=int, default=4)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--write-baseline", action="store_true")
+    ap.add_argument("--table", action="store_true", help="print a short table, not JSON")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
@@ -189,7 +209,10 @@ def main():
         print(json.dumps(measure_live(a.url, a.model, a.turns, a.concurrency), indent=2))
         return 0
     r = run(a.engine, a.turns)
-    print(json.dumps(r, indent=2))
+    if a.table:
+        print_table(r, a.model)
+    else:
+        print(json.dumps(r, indent=2))
     if a.write_baseline:
         tmp = BASELINE.with_suffix(".tmp")
         tmp.write_text(json.dumps(r, indent=2) + "\n", encoding="utf-8")

@@ -12,29 +12,29 @@
     },
     {
       "turn": 2,
-      "prompt_tokens": 1457,
+      "prompt_tokens": 1638,
       "completion_tokens": 180,
-      "cost_usd": 0.000435
+      "cost_usd": 0.000472
     },
     {
       "turn": 3,
-      "prompt_tokens": 1457,
+      "prompt_tokens": 1819,
       "completion_tokens": 180,
-      "cost_usd": 0.000435
+      "cost_usd": 0.000508
     },
     {
       "turn": 4,
-      "prompt_tokens": 1457,
+      "prompt_tokens": 2000,
       "completion_tokens": 180,
-      "cost_usd": 0.000435
+      "cost_usd": 0.000544
     }
   ],
-  "cost_per_completed_task_usd": 0.00174,
+  "cost_per_completed_task_usd": 0.001959,
   "cost_by_stage": {
-    "prefill_usd": 0.001166,
+    "prefill_usd": 0.001383,
     "decode_usd": 0.000576,
-    "prefill_share": 0.669,
-    "decode_share": 0.331,
+    "prefill_share": 0.706,
+    "decode_share": 0.294,
     "other_stages": "arrive, tokenize, queue, schedule, stream: latency, not tokens"
   },
   "rates_usd_per_million": {
