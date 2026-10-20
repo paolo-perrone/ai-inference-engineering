@@ -33,8 +33,29 @@ calls, so cost per completed task is the unit that matters rather than cost per 
 ## Running it
 
 ```bash
-uv sync
-python -m examples.mini_session.run --engine naive
+python3 measure.py --engine naive --table
 ```
 
 The naive runner is deliberately bad. That is the point of chapter 1.
+
+## Timing it on your card (chapter 2)
+
+```bash
+pip install vllm==0.30.0
+python3 measure.py --serve Qwen/Qwen2.5-7B-Instruct --write-baseline
+```
+
+This starts the engine twice, with CUDA graphs off and then on, and prefix caching off both
+times, so every run pays a full prefill. Each start gets one warm-up request and five timed
+ones, sent one at a time. It prints every run's time to first token and decode step, each
+setting's median and spread, and the ratio between the two settings. The run log in `runs/`
+names the card, the driver, and the CUDA and vLLM versions. `--write-baseline` adds the
+graphs-on `decode_step_ms` and `ttft_s` to `baseline.json` and keeps every other field.
+
+Against an engine you started yourself, the same timing runs with whatever flags it has:
+
+```bash
+python3 measure.py --url http://localhost:8000 --model <served model name> --steps
+```
+
+`python3 test_measure.py` checks both modes against a fake engine, with no GPU.
