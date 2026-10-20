@@ -30,3 +30,6 @@ prof/
 
 # os
 .DS_Store
+
+# run logs and engine logs from measure.py, one set per run on your own card
+examples/mini-session/runs/
