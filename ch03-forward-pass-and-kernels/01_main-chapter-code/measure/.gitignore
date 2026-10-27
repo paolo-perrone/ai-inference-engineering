@@ -1,0 +1,3 @@
+__pycache__/
+results/traces/
+results/raw/*.log
