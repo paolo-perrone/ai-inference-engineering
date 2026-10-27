@@ -1,0 +1,40 @@
+{
+  "_about": "Every input chapter 7's runs use. 'source' names the draft line that defines a value; a source starting UNDEFINED means the draft does not fix it and the value is a provisional choice Paolo has to confirm. run.py copies the UNDEFINED ones into every result as provisional_inputs.",
+  "model": {"value": "Qwen/Qwen2.5-7B-Instruct", "source": "draft line 180"},
+  "vllm_version": {"value": "0.30.0", "source": "draft line 125, Shared Numbers vllm-pin"},
+  "price_per_hour_usd": {"value": 0.71, "source": "draft line 352, Shared Numbers l4-price"},
+  "tpot_target_p99_ms": {"value": 100, "source": "draft line 311"},
+  "runs": {"value": 5, "source": "draft lines 48, 158, 177: median of five runs"},
+  "seed": {"value": 7, "source": "UNDEFINED: any fixed seed; the draft names none"},
+  "kv_cache_dtype": {"value": "fp8", "source": "draft line 180"},
+  "yarn_override": {"value": {"rope_scaling": {"rope_type": "yarn", "factor": 4.0, "original_max_position_embeddings": 32768}}, "source": "draft line 181 '[chapter 6 long-context flags]' = chapter 6 draft line 35"},
+  "completion_tokens": {"value": 180, "source": "draft lines 99 and 344: the fixture's completion length"},
+
+  "sessions": {"value": 4, "source": "draft line 183, --sessions 4"},
+  "prefix_tokens": {"value": 120000, "source": "UNDEFINED: draft says '120k'. 120,000 matches its 3.4 GB at 28 KB per token (line 91); the book's k=1024 reading, 122,880, does not fit: 122,880 + 8,192 + 50 + 180 exceeds 131,072"},
+  "tail_tokens": {"value": 8192, "source": "draft line 89/91, '8k tails', 0.23 GB each"},
+  "followup_new_tokens": {"value": 50, "source": "draft lines 169, 213"},
+  "cold_paste_tokens": {"value": 32768, "source": "draft line 199: 32,768 divided by 2,048 is sixteen"},
+  "cold_paste_max_tokens": {"value": 180, "source": "UNDEFINED: the paste's own answer length; set to the fixture's completion length"},
+  "followup_mean_gap_s": {"value": 20.0, "source": "UNDEFINED: arrival rate of follow-ups per session; exponential gaps, mean 20 s, so a session rarely has two answers in flight"},
+  "replay_duration_s": {"value": 60.0, "source": "UNDEFINED: how long each replay sends follow-ups"},
+  "paste_at_s": {"value": 20.0, "source": "UNDEFINED: when the cold paste lands inside the replay"},
+  "followups_carry_history": {"value": false, "source": "UNDEFINED: each follow-up is prefix + session tail + its own 50 tokens; earlier answers are not appended"},
+  "runC_priorities": {"value": {"followup": 0, "paste": 1}, "source": "draft line 384"},
+
+  "static_answer_lengths": {"value": [20, 90, 130, 180, 20, 90, 130, 180], "source": "UNDEFINED: draft line 158 says eight answers of 20 to 180 tokens; these are line 99's four lengths, twice"},
+  "static_batch": {"value": 4, "source": "draft line 162: batches of 4"},
+  "static_context": {"value": "mini-session prompt", "source": "UNDEFINED: the eight follow-ups' context; set to the mini-session's own prompt plus 50 new tokens"},
+  "continuous_max_num_seqs": {"value": 4, "source": "UNDEFINED: the continuous side's slot count; 4, the same slots as the static side (figure 7.3)"},
+
+  "admit128k_prompt_tokens": {"value": 130892, "source": "UNDEFINED: '128k request' read as 131,072 tokens of context including the 180-token answer"},
+  "admit128k_stagger_s": {"value": 0.05, "source": "UNDEFINED: 'sent together'; the second leaves 50 ms after the first so the order is fixed"},
+
+  "sweep32k_points": {"value": [1, 2, 4, 8], "source": "draft lines 52-57 and 326 (writing plan item 14 says 1 to 32)"},
+  "sweep32k_prompt_tokens": {"value": 32588, "source": "UNDEFINED: '32k context' read as 32,768 including the 180-token answer"},
+  "sweepshared_points": {"value": [1, 2, 3, 4, 5, 6], "source": "draft lines 278, 284-291"},
+  "sweep4k_points": {"value": [1, 2, 4, 8, 16, 32], "source": "draft line 321, writing plan item 13"},
+  "sweep4k_prompt_tokens": {"value": 3916, "source": "UNDEFINED: '4k context' read as 4,096 including the 180-token answer"},
+  "sweep_requests_per_point": {"value": "equal to max-num-seqs", "source": "UNDEFINED: each point sends as many sessions as its sequence cap"},
+  "tpot_p99_definition": {"value": "per run: p99 of the per-request TPOTs; reported as the median of five runs, plus the p99 pooled over all runs", "source": "UNDEFINED: with 1 to 6 requests a run, a per-run p99 is close to the run's maximum"}
+}
