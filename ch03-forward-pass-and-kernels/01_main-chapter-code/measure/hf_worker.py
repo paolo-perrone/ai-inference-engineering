@@ -6,7 +6,7 @@ cache or a leftover allocation never leaks into the next configuration.
 
   python hf_worker.py tokens   --out t.json
   python hf_worker.py memfree  --out m.json
-  python hf_worker.py ablation --impl eager --lengths mini,4096,8192 --out a.json
+  python hf_worker.py ablation --impl eager --lengths mini,4096,8192 --search 256 --out a.json
   python hf_worker.py fusion   --impl flash_attention_2 --compile 1 --out f.json
   python hf_worker.py kernels  --impl sdpa --out k.json
 
@@ -137,10 +137,63 @@ def mode_ablation(a):
             torch.cuda.empty_cache()
         rows.append(row)
     ooms = [r["prompt_len"] for r in rows if r.get("oom")]
-    return {"impl": attn_record(model, a.impl), "weights_allocated_gb": after_load / 1e9,
-            "settings": {"logits_to_keep": 1, "use_cache": False, "runs": a.runs,
-                         "warmup": common.WARMUP, "timer": "torch.cuda.Event"},
-            "rows": rows, "first_oom_length": min(ooms) if ooms else None}
+    out = {"impl": attn_record(model, a.impl), "weights_allocated_gb": after_load / 1e9,
+           "settings": {"logits_to_keep": 1, "use_cache": False, "runs": a.runs,
+                        "warmup": common.WARMUP, "timer": "torch.cuda.Event"},
+           "rows": rows, "first_oom_length": min(ooms) if ooms else None}
+    if a.search:
+        ran = [r["prompt_len"] for r in rows if r.get("oom") is False and not r.get("error")]
+        out["oom_search"] = oom_search(model, tok, max(ran) if ran else 0,
+                                       min(ooms) if ooms else None, a.search)
+    return out
+
+
+def fits(model, tok, length):
+    """One prefill at exactly `length` tokens: True if it ran, False if it ran out of memory."""
+    import gc
+    import torch
+    x = torch.tensor([common.padded_ids(tok, length)], device="cuda")
+    try:
+        with torch.inference_mode():
+            model(x, use_cache=False, logits_to_keep=1)
+        torch.cuda.synchronize()
+        return True
+    except torch.cuda.OutOfMemoryError:
+        return False
+    finally:
+        del x
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
+def oom_search(model, tok, ran, failed, step):
+    """The out-of-memory prompt length, to the nearest `step` tokens: the shortest length
+    that fails, with the longest that runs `step` below it. With no failure yet, the bound
+    doubles up to the model's 32,768-token context; then it bisects on multiples of `step`."""
+    limit = common.MAX_CONTEXT
+    probes = []
+    lo = (ran // step) * step
+    hi = failed
+    while hi is None:
+        nxt = min(max(lo, step) * 2, limit)
+        ok = fits(model, tok, nxt)
+        probes.append({"prompt_len": nxt, "ran": ok})
+        if ok:
+            lo = nxt
+            if nxt >= limit:
+                return {"step": step, "probes": probes, "longest_ran": lo, "oom_length": None,
+                        "note": f"ran at the model's {limit}-token limit; no out-of-memory length"}
+        else:
+            hi = nxt
+    hi = -(-hi // step) * step
+    while hi - lo > step:
+        mid = ((lo + hi) // 2 // step) * step
+        ok = fits(model, tok, mid)
+        probes.append({"prompt_len": mid, "ran": ok})
+        lo, hi = (mid, hi) if ok else (lo, mid)
+    return {"step": step, "probes": probes, "longest_ran": lo, "oom_length": hi,
+            "note": "one prefill per probe; an earlier out-of-memory error can leave the "
+                    "allocator fragmented, so the length is a lower bound on what fits"}
 
 
 # ------------------------------------------------------------------ measurement 13
@@ -309,6 +362,8 @@ def main():
     ap.add_argument("--runs", type=int, default=common.RUNS)
     ap.add_argument("--compile", type=int, default=0)
     ap.add_argument("--decode-steps", type=int, default=32)
+    ap.add_argument("--search", type=int, default=0,
+                    help="ablation: find the out-of-memory prompt length to this many tokens")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     fn = {"tokens": mode_tokens, "memfree": mode_memfree, "ablation": mode_ablation,
