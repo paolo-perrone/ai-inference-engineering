@@ -10,7 +10,7 @@ the `rows` list with that `impl` and `label`; `sweep[*]` means every entry of `s
 a row names a subcommand or field that `run.py` does not produce. Line numbers drift as the draft
 is edited; the test prints a warning for a moved line and fails only on an unmapped placeholder.
 
-44 placeholders, 44 rows.
+46 placeholders, 46 rows.
 
 | # | Line | Placeholder (verbatim) | Subcommand | Result field(s) | Note |
 |---|---|---|---|---|---|
@@ -33,7 +33,7 @@ is edited; the test prints a warning for a moved line and fails only on an unmap
 | 17 | 171 | `[FIXTURE: tokens per streamed chunk, measurement 2]` | `m02` | `tokens_per_chunk_min, tokens_per_chunk_max, tokens_per_chunk_mean` |  |
 | 18 | 231 | `[FIXTURE: kernels per decode step and per layer, measurement 7]` | `m07` | `kernels_per_step, kernels_per_layer` |  |
 | 19 | 233 | `[FIXTURE: output head kernel time, measurement 9]` | `m09` | `output_head_ms_median` | the longest kernel after the graph replay; output_head_kernel names it |
-| 20 | 237 | `[FIXTURE: sampling kernels after the head, bench default and Qwen defaults, measurement 9]` | `m09` | `sampling_kernels_bench_default, sampling_kernels_qwen_defaults` |  |
+| 20 | 237 | `[FIXTURE: sampling kernels after the head under the bench, greedy and Qwen's defaults, measurement 9]` | `m09` | `sampling_kernels_bench_default, sampling_kernels_greedy, sampling_kernels_qwen_defaults` | greedy: `vllm serve` with `--generation-config vllm`, one request at temperature 0 |
 | 21 | 266 | `[FIXTURE: kernel names under --enforce-eager, measurement 8]` | `m08` | `enforce_eager_layer_sequence, enforce_eager_vllm_kernels_found` |  |
 | 22 | 272 | `[FIXTURE: kernels per layer in transformers eager, measurement 12]` | `m12` | `kernels_per_layer` |  |
 | 23 | 278 | `[FIXTURE: kernel names for the add and RMSNorm in transformers eager, measurement 12]` | `m12` | `add_and_norm_kernel_names` |  |
@@ -51,11 +51,13 @@ is edited; the test prints a warning for a moved line and fails only on an unmap
 | 35 | 350 | `[FIXTURE: GB, m14]` | `m14` | `rows[impl=flash_attention_2,label=4096].peak_gb` |  |
 | 36 | 351 | `[FIXTURE: ms, m14]` | `m14` | `rows[impl=flash_attention_2,label=8192].prefill_ms` |  |
 | 37 | 351 | `[FIXTURE: GB, m14]` | `m14` | `rows[impl=flash_attention_2,label=8192].peak_gb` |  |
+| 45 | 352 | `[FIXTURE: longest prompt that ran, to 256 tokens, m14]` | `m14` | `longest_ran_eager` | from the eager out-of-memory search, `oom_search_eager` holds every probe |
+| 46 | 353 | `[FIXTURE: shortest prompt that ran out of memory, to 256 tokens, m14]` | `m14` | `oom_length_eager` | null when 32,768 tokens ran; the chapter's proximal win |
 | 38 | 354 | `[FIXTURE: free memory after loading the bf16 model, measurement 15]` | `m15` | `free_gb` |  |
 | 39 | 356 | `[FIXTURE: prefill time gap between eager and flash_attention_2 at the mini-session length, measurement 14]` | `m14` | `prefill_gap_ms_eager_minus_fa2_mini` |  |
 | 40 | 376 | `[FIXTURE: the FLASH_ATTN backend line, measurement 10]` | `m10` | `flash_attn_backend_line` |  |
 | 41 | 376 | `[FIXTURE: attention kernel names in prefill and decode, measurement 11]` | `m11` | `attention_kernels_prefill, attention_kernels_decode` |  |
-| 42 | 390 | `[FIXTURE: decode step time with CUDA graphs off and on, as a ratio, measurement 6]` | `m06` | `ratio_graphs_none_over_default` | draft's switch (cudagraph_mode NONE); the plan's --enforce-eager ratio is ratio_enforce_eager_over_default |
+| 42 | 392 | `[FIXTURE: decode step time under Qwen's defaults against greedy, as a ratio, measurement 17]` | `m17` | `ratio_qwen_defaults_over_greedy` | exercise 1 since review 5; m06 still times the graphs pair chapter 2 prints |
 | 43 | 391 | `[FIXTURE: decode step time and prefill time, transformers eager against torch.compile, measurement 13]` | `m13` | `hf_eager_decode_step_ms, hf_eager_prefill_ms, hf_compile_decode_step_ms, hf_compile_prefill_ms` |  |
 | 44 | 391 | `[FIXTURE: prefill time, vLLM default against custom ops, measurement 13]` | `m13` | `vllm_default_prefill_ms, vllm_custom_ops_all_prefill_ms` |  |
 

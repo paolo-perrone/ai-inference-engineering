@@ -39,16 +39,17 @@ graph capture) dominates, and the first start pays the compile cache.
 | m04 | Prefill against the 0.16 s (19T) and 0.18 s (22.1T) floors, and the count rescaled to the engine's prompt | m01's engine run | 0 |
 | m05 | TTFT and decode step at the real prompt, 4,096 and 8,192 tokens (exact token-ID prompts) | vLLM | 8 |
 | m06 | Decode step with `cudagraph_mode NONE`, with `--enforce-eager`, and default; both ratios | vLLM | 9 |
+| m17 | Decode step under Qwen's sampling defaults (no `--generation-config vllm`, no sampling fields) against greedy, and the ratio | vLLM | 6 |
 | m10 | The FLASH_ATTN backend line, the generation-config override line, Qwen's generation_config.json | vLLM | 4 |
 | m13 | transformers eager against `torch.compile` (flash_attention_2 both); vLLM default, `-cc.custom_ops=["all"]`, `-O0` | transformers + vLLM | 16 |
 | m15 | `torch.cuda.mem_get_info` after loading the bf16 model | transformers | 2 |
-| m14 | The attention ablation: eager, sdpa, flash_attention_2 at the real prompt, 4,096, 8,192: time, peak memory, out-of-memory | transformers | 10 |
+| m14 | The attention ablation: eager, sdpa, flash_attention_2 at the real prompt, 4,096, 8,192: time, peak memory, out-of-memory; then eager's out-of-memory length, searched to 256 tokens | transformers | 12 |
 | m12 | transformers eager kernels per layer for one decode step, the add and RMSNorm kernels by name | transformers | 3 |
 | m07 | Kernels in one vLLM decode step: per step, per layer, the layer's sequence, RoPE, split-K, copies, cuBLAS names | vLLM + Nsight Systems | 8 |
 | m11 | Attention kernel names in prefill and in decode | m07's trace | 0 |
-| m09 | Output head time, the kernels after it under bench sampling and under Qwen's defaults | m07's trace + one more capture | 8 |
+| m09 | Output head time, the kernels after it under bench sampling, greedy and Qwen's defaults | m07's trace + two `vllm serve` captures | 12 |
 | m08 | Kernel names under `--enforce-eager`, and whether `cudagraph_mode NONE` keeps the `triton_` kernels | vLLM + Nsight Systems | 14 |
-| | **Total** | | **89**, plus about 15 for installs and the model download |
+| | **Total** | | **101**, plus about 15 for installs and the model download |
 
 Shared work is cached, never assumed: m02 to m04 read the engine run m01 saved in
 `results/raw/serve-default.json`, and m09 and m11 read m07's trace in `results/traces/`. Run any
