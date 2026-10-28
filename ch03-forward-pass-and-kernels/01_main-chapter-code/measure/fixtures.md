@@ -51,8 +51,8 @@ is edited; the test prints a warning for a moved line and fails only on an unmap
 | 35 | 350 | `[FIXTURE: GB, m14]` | `m14` | `rows[impl=flash_attention_2,label=4096].peak_gb` |  |
 | 36 | 351 | `[FIXTURE: ms, m14]` | `m14` | `rows[impl=flash_attention_2,label=8192].prefill_ms` |  |
 | 37 | 351 | `[FIXTURE: GB, m14]` | `m14` | `rows[impl=flash_attention_2,label=8192].peak_gb` |  |
-| 45 | 352 | `[FIXTURE: longest prompt that ran, to 256 tokens, m14]` | `m14` | `longest_ran_eager` | from the eager out-of-memory search, `oom_search_eager` holds every probe |
-| 46 | 353 | `[FIXTURE: shortest prompt that ran out of memory, to 256 tokens, m14]` | `m14` | `oom_length_eager` | null when 32,768 tokens ran; the chapter's proximal win |
+| 45 | 352 | `[FIXTURE: longest that ran, m14]` | `m14` | `longest_ran_eager` | from the eager out-of-memory search, `oom_search_eager` holds every probe |
+| 46 | 353 | `[FIXTURE: OOM length to 256 tokens, m14]` | `m14` | `oom_length_eager` | null when 32,768 tokens ran; the chapter's proximal win |
 | 38 | 354 | `[FIXTURE: free memory after loading the bf16 model, measurement 15]` | `m15` | `free_gb` |  |
 | 39 | 356 | `[FIXTURE: prefill time gap between eager and flash_attention_2 at the mini-session length, measurement 14]` | `m14` | `prefill_gap_ms_eager_minus_fa2_mini` |  |
 | 40 | 376 | `[FIXTURE: the FLASH_ATTN backend line, measurement 10]` | `m10` | `flash_attn_backend_line` |  |
