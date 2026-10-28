@@ -29,6 +29,7 @@ MODEL = "Qwen/Qwen2.5-7B-Instruct"
 DTYPE = "bfloat16"
 PINS = {"vllm": "0.30.0", "torch": "2.13.0", "transformers": "5.17.0"}
 RUNS = 5                      # timed runs per setting; the book prints the median of 5
+MAX_CONTEXT = 32768           # Qwen2.5-7B's max_position_embeddings, config.json
 WARMUP = 1                    # discarded runs after each engine start
 COMPLETION_TOKENS = mini.COMPLETION_TOKENS   # 180, the mini-session's answer length
 

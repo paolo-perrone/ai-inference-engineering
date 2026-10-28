@@ -34,6 +34,7 @@ import vllm_session  # noqa: E402
 SWEEP = ["mini", 4096, 8192]          # the draft's 1,457 (the real prompt), 4,096, 8,192
 ABLATION_LENGTHS = "mini,4096,8192"
 ABLATION_IMPLS = ["eager", "sdpa", "flash_attention_2"]
+OOM_SEARCH_STEP = 256                 # the chapter's proximal win is a length, to 256 tokens
 BENCH_INPUT_LEN = 1457                # the draft's command; vllm bench latency uses random IDs
 BENCH_OUTPUT_LEN = 8
 PROFILER_CUDA = json.dumps({"profiler": "cuda"})
@@ -350,28 +351,31 @@ def m08(ctx):
             "details": out}
 
 
-def qwen_defaults_trace(ctx):
-    """`vllm serve` under nsys without --generation-config vllm; one request with no
-    sampling fields, between /start_profile and /stop_profile."""
-    base = common.TRACES / "serve-qwen_defaults"
+def serve_trace(ctx, config="qwen_defaults"):
+    """`vllm serve` under nsys, one request between /start_profile and /stop_profile.
+    qwen_defaults: no --generation-config vllm and no sampling fields, so Qwen's file applies.
+    default: --generation-config vllm and temperature 0, the greedy pin the chapter uses."""
+    greedy = config != "qwen_defaults"
+    base = common.TRACES / f"serve-{config}"
     rep, db = base.with_suffix(".nsys-rep"), base.with_suffix(".sqlite")
     prefix = nsys_tools.profile_cmd(base, [], "stop-shutdown")
     extra = ["--profiler-config", PROFILER_CUDA]
     if ctx.dry:
-        ctx.note(prefix + vllm_session.serve_cmd("qwen_defaults", "<port>", extra), "nsys + serve")
-        ctx.note("POST /start_profile; POST /v1/completions prompt=mini max_tokens=8, no sampling "
-                 "fields, no ignore_eos; POST /stop_profile", "requests")
+        ctx.note(prefix + vllm_session.serve_cmd(config, "<port>", extra), "nsys + serve")
+        ctx.note("POST /start_profile; POST /v1/completions prompt=mini max_tokens=8, "
+                 + ("temperature=0" if greedy else "no sampling fields")
+                 + ", no ignore_eos; POST /stop_profile", "requests")
         ctx.note(nsys_tools.export_cmd(rep, db), "export")
         return None
     if not (db.exists() and not ctx.fresh):
         import stream_client
         common.TRACES.mkdir(parents=True, exist_ok=True)
-        eng = vllm_session.Engine("qwen_defaults", base.with_suffix(".log"), prefix=prefix, extra=extra)
+        eng = vllm_session.Engine(config, base.with_suffix(".log"), prefix=prefix, extra=extra)
         with eng:
             ctx.commands.append(common.shell(eng.cmd))
             eng.post("/start_profile")
             stream_client.stream_once(eng.url, stream_client.request_body(
-                common.MODEL, common.mini_prompt(), 8, greedy=False, ignore_eos=False))
+                common.MODEL, common.mini_prompt(), 8, greedy=greedy, ignore_eos=False))
             try:
                 eng.post("/stop_profile", timeout=120)
             except OSError:
@@ -390,17 +394,21 @@ def qwen_defaults_trace(ctx):
 
 def m09(ctx):
     t = bench_trace(ctx, "default")
-    try:
-        q = qwen_defaults_trace(ctx)
-    except Exception as e:  # the head time still stands without the second capture
-        if ctx.dry:
-            raise
-        q = {"error": f"{type(e).__name__}: {e}"}
+    caps = {}
+    for config in ("default", "qwen_defaults"):
+        try:
+            caps[config] = serve_trace(ctx, config)
+        except Exception as e:  # the head time still stands without the serve captures
+            if ctx.dry:
+                raise
+            caps[config] = {"error": f"{type(e).__name__}: {e}"}
+    q, g = caps["qwen_defaults"], caps["default"]
     if ctx.dry:
         return None
     rep = nsys_tools.step_report(t["steps"], t["method"])
     head = rep.get("output_head") or {}
     qh = (q or {}).get("output_head") or {}
+    gh = (g or {}).get("output_head") or {}
     return {
         "output_head_ms_median": head.get("ms_median"), "output_head_ms_spread": head.get("ms_spread"),
         "output_head_kernel": head.get("full_name"),
@@ -408,9 +416,12 @@ def m09(ctx):
         "head_ms_derived": common.BOOK["head_ms_derived"],
         "sampling_kernels_bench_default": head.get("after_head"),
         "sampling_kernel_count_bench_default": len(head.get("after_head") or []),
+        "sampling_kernels_greedy": gh.get("after_head"),
+        "sampling_kernel_count_greedy": len(gh.get("after_head") or []) if gh else None,
         "sampling_kernels_qwen_defaults": qh.get("after_head"),
         "sampling_kernel_count_qwen_defaults": len(qh.get("after_head") or []) if qh else None,
         "qwen_defaults_report": q,
+        "greedy_report": g,
         "caution": "kernels after the head run until the next step's graph replay, so the "
                    "lists can include the next step's input preparation; read the names",
         "bench_sampling": "vllm bench latency hard-codes temperature=1.0, top_p=1.0, ignore_eos "
@@ -516,7 +527,8 @@ def m13(ctx):
 def m14(ctx):
     per = {}
     for impl in ABLATION_IMPLS:
-        r = hf(ctx, "ablation", "--impl", impl, "--lengths", ABLATION_LENGTHS,
+        search = ["--search", OOM_SEARCH_STEP] if impl == "eager" else []
+        r = hf(ctx, "ablation", "--impl", impl, "--lengths", ABLATION_LENGTHS, *search,
                name=f"ablation-{impl}")
         if not ctx.dry:
             per[impl] = r
@@ -541,6 +553,9 @@ def m14(ctx):
             "transformers_version": log["versions"]["transformers"],
             "rows": rows,
             "first_oom_length": {impl: r.get("first_oom_length") for impl, r in per.items()},
+            "oom_length_eager": (per.get("eager", {}).get("oom_search") or {}).get("oom_length"),
+            "longest_ran_eager": (per.get("eager", {}).get("oom_search") or {}).get("longest_ran"),
+            "oom_search_eager": per.get("eager", {}).get("oom_search"),
             "peak_gb_eager_mini": at("eager", "mini", "peak_gb"),
             "peak_gb_fa2_mini": at("flash_attention_2", "mini", "peak_gb"),
             "prefill_gap_ms_eager_minus_fa2_mini": (e - f) if e is not None and f is not None else None,
@@ -608,7 +623,8 @@ MEASUREMENTS = [
     ("m15", m15, "Free memory beside the weights", 2, "transformers", ["free_gb", "total_gb"]),
     ("m14", m14, "The attention ablation", 10, "transformers (+ kernels for flash_attention_2)",
      ["driver", "torch_version", "transformers_version", "rows", "peak_gb_eager_mini",
-      "peak_gb_fa2_mini", "prefill_gap_ms_eager_minus_fa2_mini", "first_oom_length"]),
+      "peak_gb_fa2_mini", "prefill_gap_ms_eager_minus_fa2_mini", "first_oom_length",
+      "oom_length_eager", "longest_ran_eager"]),
     ("m12", m12, "Transformers eager kernels per layer", 3, "transformers",
      ["kernels_per_layer", "add_and_norm_kernel_names"]),
     ("m07", m07, "Kernels of one decode step, default config", 8, "vllm + Nsight Systems",
@@ -618,7 +634,7 @@ MEASUREMENTS = [
      ["attention_kernels_prefill", "attention_kernels_decode", "combine_in_decode"]),
     ("m09", m09, "Graph boundary and sampling tail", 8, "vllm + Nsight (reuses m07's trace)",
      ["output_head_ms_median", "output_head_kernel", "sampling_kernels_bench_default",
-      "sampling_kernels_qwen_defaults"]),
+      "sampling_kernels_greedy", "sampling_kernels_qwen_defaults"]),
     ("m08", m08, "Kernel names under --enforce-eager", 14, "vllm + Nsight Systems",
      ["enforce_eager_layer_sequence", "enforce_eager_vllm_kernels_found",
       "graphs_none_triton_kernels_present"]),

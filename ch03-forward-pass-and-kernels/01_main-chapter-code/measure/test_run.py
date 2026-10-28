@@ -329,6 +329,19 @@ class HFTests(unittest.TestCase):
                          ["input_norm", "input_norm", "attn", "residual/other (layer body)"])
         self.assertEqual(per[-1]["kernel"], "add_kernel")
 
+    def test_oom_search_brackets_the_length_to_256(self):
+        real = hf_worker.fits
+        try:
+            for cap, ran, failed, want in [(7000, 4096, 8192, (6912, 7168)),
+                                           (6144, 4096, 8192, (6144, 6400)),
+                                           (20000, 8192, None, (19968, 20224)),
+                                           (40000, 8192, None, (32768, None))]:
+                hf_worker.fits = lambda m, t, n, cap=cap: n <= cap
+                r = hf_worker.oom_search(None, None, ran, failed, 256)
+                self.assertEqual((r["longest_ran"], r["oom_length"]), want)
+        finally:
+            hf_worker.fits = real
+
 
 # ---------------------------------------------------------------- run.py and its contracts
 
