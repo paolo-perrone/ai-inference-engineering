@@ -357,7 +357,7 @@ class RunTests(unittest.TestCase):
                            capture_output=True, text=True)
         self.assertEqual(p.returncode, 0)
         ids = p.stdout.split()
-        self.assertEqual(sorted(ids), [f"m{i:02d}" for i in range(1, 17)])
+        self.assertEqual(sorted(ids), [f"m{i:02d}" for i in range(1, 18)])
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_dry_run_all(self):

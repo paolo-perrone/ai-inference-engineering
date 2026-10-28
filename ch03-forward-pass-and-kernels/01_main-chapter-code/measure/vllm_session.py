@@ -110,16 +110,18 @@ class Engine:
             return ""
 
 
-def timed_runs(url, prompt, runs=common.RUNS, warmup=common.WARMUP, max_tokens=None):
+def timed_runs(url, prompt, runs=common.RUNS, warmup=common.WARMUP, max_tokens=None, greedy=True):
     max_tokens = max_tokens or common.COMPLETION_TOKENS
+    body = lambda: stream_client.request_body(common.MODEL, prompt, max_tokens, greedy=greedy)
     for _ in range(warmup):
-        stream_client.stream_once(url, stream_client.request_body(common.MODEL, prompt, max_tokens))
-    per = [stream_client.stream_once(url, stream_client.request_body(common.MODEL, prompt, max_tokens))
-           for _ in range(runs)]
+        stream_client.stream_once(url, body())
+    per = [stream_client.stream_once(url, body()) for _ in range(runs)]
     return {"per_run": per, **stream_client.aggregate(per)}
 
 
 def session(config, prompts, fresh=False, runs=common.RUNS):
+    # qwen_defaults sends no sampling fields, so the model's own sampling applies
+    greedy = CONFIGS[config][1]
     """Start one engine config, time each named prompt, and cache the raw result.
 
     prompts: {label: text or token-id list}. A cached raw file is reused only when it
@@ -137,7 +139,7 @@ def session(config, prompts, fresh=False, runs=common.RUNS):
         out["server_command"] = eng.cmd
         out["environment_ch2_harness"] = common.mini.environment(eng.url, eng.cmd[0])
         for label, prompt in prompts.items():
-            out["prompts"][label] = timed_runs(eng.url, prompt, runs=runs)
+            out["prompts"][label] = timed_runs(eng.url, prompt, runs=runs, greedy=greedy)
         out["server_log_tail"] = eng.log_text()[-20000:]
     common.RAW.mkdir(parents=True, exist_ok=True)
     raw_path.write_text(json.dumps(out, indent=2, default=str) + "\n", encoding="utf-8")

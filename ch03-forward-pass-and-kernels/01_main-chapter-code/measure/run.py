@@ -89,9 +89,10 @@ def prompts_for(labels):
 def serve(ctx, config, labels=("mini",)):
     if ctx.dry:
         ctx.note(vllm_session.serve_cmd(config, "<port>"), f"engine '{config}'")
+        sampling = "temperature=0" if vllm_session.CONFIGS[config][1] else "no sampling fields"
         for lab in labels:
             ctx.note(f"POST /v1/completions x {common.WARMUP} warm-up + {common.RUNS} timed, "
-                     f"prompt={lab}, max_tokens={common.COMPLETION_TOKENS}, temperature=0, "
+                     f"prompt={lab}, max_tokens={common.COMPLETION_TOKENS}, {sampling}, "
                      f"ignore_eos, stream, return_token_ids, cache_salt", "requests")
         return None
     s = vllm_session.session(config, prompts_for(labels), fresh=ctx.fresh)
@@ -300,6 +301,23 @@ def m06(ctx):
                    "and chapter 2: graphs off, compiler on); enforce_eager = --enforce-eager (the "
                    "plan: graphs off AND compiler off)")
     return out
+
+
+def m17(ctx):
+    res = {name: serve(ctx, name) for name in ("default", "qwen_defaults")}
+    if ctx.dry:
+        return None
+    st = {n: s["prompts"]["mini"]["tpot_ms"] for n, s in res.items()}
+    return {"decode_step_ms_greedy": st["default"]["median"],
+            "decode_step_ms_spread_greedy": st["default"]["spread"],
+            "decode_step_ms_qwen_defaults": st["qwen_defaults"]["median"],
+            "decode_step_ms_spread_qwen_defaults": st["qwen_defaults"]["spread"],
+            "ratio_qwen_defaults_over_greedy": st["qwen_defaults"]["median"] / st["default"]["median"],
+            "server_command_qwen_defaults": res["qwen_defaults"]["server_command"],
+            "note": "exercise 1: greedy = --generation-config vllm and temperature 0; "
+                    "qwen_defaults = no --generation-config vllm and no sampling fields, so "
+                    "generation_config.json's temperature, top-k, top-p and 1.05 penalty apply; "
+                    "both send ignore_eos, so both decode 180 tokens"}
 
 
 def m07(ctx):
@@ -613,6 +631,8 @@ MEASUREMENTS = [
     ("m06", m06, "CUDA graphs off and on", 9, "vllm",
      ["ratio_graphs_none_over_default", "ratio_enforce_eager_over_default",
       "decode_step_ms_default", "decode_step_ms_graphs_none", "decode_step_ms_enforce_eager"]),
+    ("m17", m17, "Decode step under Qwen's sampling defaults against greedy", 6, "vllm",
+     ["decode_step_ms_greedy", "decode_step_ms_qwen_defaults", "ratio_qwen_defaults_over_greedy"]),
     ("m10", m10, "Startup log lines", 4, "vllm",
      ["flash_attn_backend_line", "sampling_override_line", "sampling_override_params",
       "generation_config_json"]),
@@ -680,8 +700,8 @@ def dry_checks():
     if common.mini.count_tokens(common.mini_prompt()) != common.BOOK["fixture_prompt_estimate"]:
         problems.append("the mini-session prompt no longer estimates to baseline.json's 1,457")
     ids = [m[0] for m in MEASUREMENTS]
-    if sorted(ids) != [f"m{i:02d}" for i in range(1, 17)]:
-        problems.append(f"measurement ids are not m01..m16: {ids}")
+    if sorted(ids) != [f"m{i:02d}" for i in range(1, 18)]:
+        problems.append(f"measurement ids are not m01..m17: {ids}")
     return problems
 
 
