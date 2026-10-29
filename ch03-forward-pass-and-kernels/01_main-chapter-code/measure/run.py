@@ -19,6 +19,7 @@ its own: if the cache is missing it does the work itself.
 """
 import argparse
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -100,9 +101,17 @@ def serve(ctx, config, labels=("mini",)):
     return s
 
 
+# The interpreter the transformers worker runs on. transformers 5.17.0 serves
+# flash_attention_2 without the flash_attn package through the hub kernel
+# kernels-community/flash-attn2, which has no build for torch 2.13 (its build/ folder stops
+# at torch212), so on vLLM 0.30.0's torch 2.13 that arm fails. AIE_HF_PYTHON points the
+# worker at an environment with torch 2.12; examples/colab/hf_env.sh builds one.
+HF_PYTHON = os.environ.get("AIE_HF_PYTHON") or sys.executable
+
+
 def hf(ctx, mode, *args, name=None):
     out = common.RAW / f"hf-{name or mode}.json"
-    cmd = [sys.executable, str(HERE / "hf_worker.py"), mode, *map(str, args), "--out", str(out)]
+    cmd = [HF_PYTHON, str(HERE / "hf_worker.py"), mode, *map(str, args), "--out", str(out)]
     if ctx.dry:
         ctx.note(cmd, "transformers worker")
         return None
@@ -519,6 +528,7 @@ def m13(ctx):
         for k in ("prefill_ms", "prefill_ms_spread", "decode_step_ms", "decode_step_ms_spread"):
             out[f"{tag}_{k}"] = r.get(k)
         out[f"{tag}_attn"] = r.get("impl")
+        out[f"{tag}_torch"] = (r.get("worker_env") or {}).get("torch")
         if r.get("error"):
             out[f"{tag}_error"] = r["error"]
     for config in ("default", "custom_ops_all", "O0"):
@@ -566,9 +576,11 @@ def m14(ctx):
         return None
     e, f = at("eager", "mini", "prefill_ms"), at("flash_attention_2", "mini", "prefill_ms")
     log = common.run_log()
+    wenv = next((r.get("worker_env") for r in per.values() if r.get("worker_env")), None) or {}
     return {"driver": log["driver"],
-            "torch_version": log["versions"]["torch"],
-            "transformers_version": log["versions"]["transformers"],
+            "torch_version": wenv.get("torch") or log["versions"]["torch"],
+            "transformers_version": wenv.get("transformers") or log["versions"]["transformers"],
+            "worker_python": wenv.get("python"),
             "rows": rows,
             "first_oom_length": {impl: r.get("first_oom_length") for impl, r in per.items()},
             "oom_length_eager": (per.get("eager", {}).get("oom_search") or {}).get("oom_length"),

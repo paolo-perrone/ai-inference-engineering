@@ -354,6 +354,20 @@ def mode_kernels(a):
                                for k in r["kernels"]]}
 
 
+def worker_env():
+    """The interpreter and versions this worker ran on, which can differ from run.py's
+    when AIE_HF_PYTHON points at another environment."""
+    env = {"python": sys.executable}
+    try:
+        import torch
+        import transformers
+        env.update(torch=torch.__version__, torch_cuda=torch.version.cuda,
+                   transformers=transformers.__version__)
+    except Exception as e:  # recorded, never fatal: the result above is what matters
+        env["error"] = f"{type(e).__name__}: {e}"
+    return env
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["tokens", "memfree", "ablation", "fusion", "kernels"])
@@ -372,6 +386,7 @@ def main():
         res = {"ok": True, **fn(a)}
     except Exception as e:
         res = {"ok": False, "error": f"{type(e).__name__}: {e}", "traceback": traceback.format_exc()[-4000:]}
+    res["worker_env"] = worker_env()
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(res, f, indent=2, default=str)
     return 0 if res["ok"] else 1
