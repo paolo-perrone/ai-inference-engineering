@@ -37,6 +37,16 @@ def steps():
             yield (ch, i, [sys.executable, "run.py", i], mdir, ["results"])
 
 
+def hf_python():
+    """Chapter 3's transformers worker runs on torch 2.12 (see hf_env.sh); build it once."""
+    r = subprocess.run(["bash", os.path.join(ROOT, "examples", "colab", "hf_env.sh")],
+                       capture_output=True, text=True)
+    if r.returncode:
+        print(f"hf_env.sh failed, chapter 3's transformers arms run on this interpreter:\n{r.stderr[-2000:]}")
+        return None
+    return r.stdout.strip().splitlines()[-1]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -62,9 +72,14 @@ def main():
             summary.append((ch, sid, "dry run"))
             continue
         os.makedirs(dest, exist_ok=True)
+        env = dict(os.environ)
+        if ch == "ch03":
+            if "AIE_HF_PYTHON" not in os.environ:
+                os.environ["AIE_HF_PYTHON"] = hf_python() or sys.executable
+            env["AIE_HF_PYTHON"] = os.environ["AIE_HF_PYTHON"]
         t0 = time.time()
         with open(os.path.join(dest, "log.txt"), "w") as log:
-            rc = subprocess.run(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT).returncode
+            rc = subprocess.run(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, env=env).returncode
         for k in keep:  # copy whatever the step produced, success or not
             src = os.path.join(cwd, k)
             if os.path.isdir(src):
