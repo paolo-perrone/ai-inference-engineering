@@ -7,7 +7,7 @@
   "runs": {"value": 5, "source": "draft lines 48, 158, 177: median of five runs"},
   "seed": {"value": 7, "source": "UNDEFINED: any fixed seed; the draft names none"},
   "kv_cache_dtype": {"value": "fp8", "source": "draft line 180"},
-  "yarn_override": {"value": {"rope_scaling": {"rope_type": "yarn", "factor": 4.0, "original_max_position_embeddings": 32768}}, "source": "draft line 181 '[chapter 6 long-context flags]' = chapter 6 draft line 35"},
+  "yarn_override": {"value": {"rope_parameters": {"rope_type": "yarn", "factor": 4.0, "original_max_position_embeddings": 32768, "rope_theta": 1000000.0}, "max_position_embeddings": 131072}, "source": "draft line 181 '[chapter 6 long-context flags]' = chapter 6 draft line 35, in the form vLLM 0.30.0 accepts (chapter 6's engine.py YARN_V030): a yarn rope type no longer multiplies max_position_embeddings by its factor (vllm/config/model.py _get_and_verify_max_len), so the printed rope_scaling form stops at --max-model-len 131072; rope_theta is Qwen2.5-7B-Instruct's own, kept because the rope_scaling setter replaces the whole rope_parameters dict"},
   "completion_tokens": {"value": 180, "source": "draft lines 99 and 344: the fixture's completion length"},
 
   "sessions": {"value": 4, "source": "draft line 183, --sessions 4"},

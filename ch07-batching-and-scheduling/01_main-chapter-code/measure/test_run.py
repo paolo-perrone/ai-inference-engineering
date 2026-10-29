@@ -183,6 +183,17 @@ class Traffic(unittest.TestCase):
         finally:
             run.TRAFFIC["prefix_tokens"]["value"] = old
 
+    def test_yarn_override_clears_the_v030_length_check(self):
+        # vLLM 0.30.0 does not scale max_position_embeddings for a yarn rope type, so the
+        # override has to carry 131072 itself or --max-model-len 131072 is refused at start
+        flags = run.LEN128K
+        o = json.loads(flags[flags.index("--hf-overrides") + 1])
+        self.assertEqual(o["max_position_embeddings"], 131072)
+        rp = o["rope_parameters"]
+        self.assertEqual((rp["rope_type"], rp["factor"], rp["original_max_position_embeddings"]),
+                         ("yarn", 4.0, 32768))
+        self.assertEqual(rp["original_max_position_embeddings"] * rp["factor"], 131072)
+
     def test_every_undefined_input_is_reported(self):
         p = run.provisional(run.REPLAY_KEYS)
         self.assertIn("followup_mean_gap_s", p)
