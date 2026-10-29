@@ -132,9 +132,29 @@ def find_period(names, min_reps=3, max_period=4000):
     return (-best[1], best[2]) if best[0] else (None, 0)
 
 
+TRITON_INDEX_RE = re.compile(r"^(triton_.*?)_\d+(\.\.\.)?$")
+
+
+def layer_key(name):
+    """A kernel name with torch.compile's per-kernel index dropped. Inductor numbers each
+    Triton kernel it generates, and the first layer's kernels fuse with the embedding, so on
+    vLLM 0.30.0 layer 0 launches triton_poi_fused_add_cat_index_3 where layers 1 to 27
+    launch triton_poi_fused_add_cat_index_9: the same operation under another index."""
+    m = TRITON_INDEX_RE.match(name)
+    return m.group(1) if m else name
+
+
 def find_layer_block(names, layers=LAYERS):
     """The smallest L and first offset where `layers` back-to-back copies of an L-kernel
-    sequence sit in `names`. Returns (L, offset) or (None, None)."""
+    sequence sit in `names`. Returns (L, offset) or (None, None). Exact names first, then
+    names with Triton's kernel index dropped (layer_key)."""
+    found = _find_layer_block(names, layers)
+    if found[0] is None:
+        found = _find_layer_block([layer_key(n) for n in names], layers)
+    return found
+
+
+def _find_layer_block(names, layers):
     n = len(names)
     for L in range(1, n // layers + 1):
         for s in range(0, n - L * layers + 1):

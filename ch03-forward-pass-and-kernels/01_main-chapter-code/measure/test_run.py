@@ -280,6 +280,27 @@ class NsysTests(unittest.TestCase):
         seq = ["emb"] + ["n", "g", "a"] * 28 + ["final"]
         self.assertEqual(nsys_tools.find_layer_block(seq), (3, 1))
 
+    def test_layer_block_across_triton_indices(self):
+        # vLLM 0.30.0 on the L4 (m07, 2026-10-28): layer 0's Triton kernels carry other
+        # inductor indices than layers 1 to 27, so 28 identical copies never appear by name
+        def layer(cat, rms=("5", "8")):
+            return ["kernel", f"triton_poi_fused_add_cat_index_{cat[0]}...",
+                    f"triton_poi_fused_add_cat_index_{cat[1]}...", "reshape_and_cache_flash_kernel",
+                    "flash_fwd_splitkv_kernel", "flash_fwd_splitkv_combine_kernel", "kernel",
+                    f"triton_red_fused_fused_add_rms_{rms[0]}...", "kernel",
+                    "triton_poi_fused_mul_silu_slic_6...", "kernel", f"triton_red_fused_fused_add_rms_{rms[1]}..."]
+        body = ["triton_red_fused__to_copy_embe_2..."] + layer(("3", "4")) + layer(("9", "10")) * 27
+        self.assertEqual(nsys_tools.find_layer_block(body), (12, 1))
+        self.assertEqual(nsys_tools.layer_key("triton_poi_fused_add_cat_index_10..."),
+                         "triton_poi_fused_add_cat_index")
+        self.assertEqual(nsys_tools.layer_key("flash_fwd_splitkv_kernel"), "flash_fwd_splitkv_kernel")
+
+    def test_worker_python_override(self):
+        env = dict(os.environ, AIE_HF_PYTHON="/opt/hf/bin/python")
+        p = subprocess.run([sys.executable, "-c", "import run; print(run.HF_PYTHON)"],
+                           cwd=HERE, env=env, capture_output=True, text=True)
+        self.assertEqual(p.stdout.strip(), "/opt/hf/bin/python")
+
     def test_gpu_trace_csv_both_header_styles(self):
         # reports/cuda_gpu_trace.py column order; the nsys binary renders units into names.
         for start, dur in (("Start (ns)", "Duration (ns)"), ("Start:ts_ns", "Duration:dur_ns")):
